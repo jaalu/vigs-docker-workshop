@@ -1,0 +1,536 @@
+---
+title: "Docker for researchers"
+author: "Jørgen Aarmo Lund"
+date: today
+format: revealjs
+---
+
+## Introduction 
+
+* Jørgen Aarmo Lund, industry PhD student at the UiT Machine Learning group for DIPS AS
+    * "Data-driven pathways": inferring usage patterns in patient record systems from auditing logs
+    * Researching explainability, natural language processing
+* DIPS develops e-health systems: patient records, laboratory services, hospital kiosks, and more
+    * Gradually moving over applications to containers
+
+## Agenda {.smaller}
+
+* Part 1: Introduction to containers
+    * What are containers?
+    * Why are they useful for ML research?
+    * Getting started with Docker
+* Part 2: Putting together our own container images
+    * Basic Dockerfile syntax
+    * Where does the model go?
+    * Debugging tips
+* Part 3: Deploying containers for ML research
+    * GPU and device access
+    * Deploying to UiT's GPU cluster
+    * Deploying to NRIS HPC clusters
+
+## Follow along
+
+Files available on 
+
+https://github.com/jaalu/vigs-docker-workshop
+
+::: {.notes}
+So this workshop is on Docker for ML researchers. Most tutorials on containers are aimed at software developers who are developing web services, and 
+
+Even though many of you from UiT may be implicitly familiar with Docker since Springfield requires it, this workshop doesn't assume any familiarity with Docker. It is going to involve a little command line usage and Python, but I will try to explain what I am doing and you are free to pose questions during the talk and in the breaks afterwards.
+
+This workshop is going to be divided into three 30-minute blocks with 15 minute breaks afterwards for questions, testing and coffee breaks.
+
+The first block is going to be a brief introduction to containers, what sort of problems they try to solve and why they can be useful for researchers, and how we set up and run the containers.
+
+The second block is going to go into putting together our own images, and how we 
+
+The last block is going to talk about ML-specific topics like getting CUDA working, deploying containers to clusters 
+:::
+
+## Motivation for software developers
+
+* IT around 2008[^1]: developers handing applications to sysadmins maintaining long-lived servers
+    * Downtime for manual installation
+    * Server and application maintenance intertwined
+    * Conflicts between dependencies
+* Containers allow _isolating_ applications and running them with their own set of dependencies
+
+[^1]: https://www.atlassian.com/devops/what-is-devops/history-of-devops
+
+::: {.notes}
+Not too long ago the convention was (and still is, in places) that programming and server maintenance were two completely different disciplines: the programmers' job was to finish programs and the sysadmins' job was to ensure the servers were running. When it was time to upgrade, an admin set aside time to upgrade to take the server offline and install the upgrade. If the upgrade failed, the server would be out of commission until the upgrade was rolled back or a hotfix was hastily delivered. And if it turned out that they had two applications which depended on different versions of the same service, well, they had a problem.
+
+Around this time people figured out that Linux had good tools to try and isolate the resources programs had access to, and used them to put together isolated _container_ environments which both let them limit the fallout of a service failing, and let them maintain separate dependency sets for each service.
+:::
+
+## Motivation for ML researchers
+
+* Replicability: making experimental conditions visible
+* Flexibility: easing transition from laptop tests to HPC training
+* Reusability: showing findings work in other settings too!
+
+::: {.notes}
+So how does this help us do research?
+
+:::
+
+## Docker 
+
+:::: {.columns}
+::: {.column width="70%"}
+* Docker allows isolating your script into a _container_, which:
+    * Runs isolated from other processes while sharing the OS
+    * Can package their own set of dependencies
+    * Can be packaged and started on other servers, including HPC clusters
+* Maintained by Docker Inc., runtime open source
+* _Docker Desktop_ packages the software with a GUI, free for researchers
+:::
+
+::: {.column width="30%"}
+![](assets/moby.png)
+:::
+::::
+
+## Docker - structure
+
+![](assets/docker-structure.png){fig-align="center"}
+
+## Key concepts
+
+We separate between *containers* and *images*:
+
+* A *container* is a standalone environment with your script and the dependencies it needs
+* An *image* is the template for making your container
+    * Images can be saved to a *registry*, like Docker Hub
+
+Containers are meant to be _disposable_: changes you want to keep - like your trained model - should be outside of the container!
+
+## Installing Docker - options
+
+* Docker Desktop: https://www.docker.com/ 
+* Play With Docker: https://labs.play-with-docker.com
+    * Free online lab with VMs provisioned
+* Docker also provides an `apt` repository
+
+## Checking that Docker works
+
+* When Docker is running, we can get a list of running containers with
+```
+$ docker ps 
+CONTAINER ID   IMAGE      COMMAND                  CREATED          STATUS         PORTS      NAMES
+```
+<!-- 
+e593fff04794   postgres   "docker-entrypoint.s…"   10 seconds ago   Up 9 seconds   5432/tcp   stupefied_elion -->
+
+* We can then retrieve an image with `docker pull`:
+```
+$ docker pull hello-world
+```
+
+* We can then build a container from the image with `docker run`:
+```
+$ docker run hello-world
+```
+
+## Running containers - custom commands
+<!-- Custom commands, interactive, detached, rm, env variables -->
+* Images specify a default command, but we can specify one ourselves in `docker run`:
+
+```
+$ docker run ubuntu echo Hello!
+Hello!
+```
+
+## Running containers - detached
+<!-- Custom commands, interactive, detached, rm, env variables -->
+* Default: containers do not accept any input, but write to the terminal
+* More likely you want a container which runs _detached_ in the background, with `--detach` or `-d`:
+```
+$ docker run -d hello-world
+$ docker ps -a
+CONTAINER ID   IMAGE         COMMAND         CREATED              STATUS                          PORTS     NAMES
+d3a5ee04babd   hello-world   "/hello"        About a minute ago   Exited (0) About a minute ago             elated_feistel
+$ docker logs elated_feistel
+```
+* NOTE: Docker options placed _before_ the container image and the command
+
+## Running containers - interactive
+* Alternatively, we can specify that the container should set up a shell and accept input with `--interactive --tty`, or `-it` for short:
+
+```
+$ docker run -it python:3.9
+Python 3.9.16 (main, May  4 2023, 06:16:43) 
+[GCC 10.2.1 20210110] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+```
+
+## Running containers - cleaning up:
+
+* Containers will stick around after they finish running
+* Nice for checking logs, restarting, but list easily clogged
+* Passing `--rm` will delete the container after it exits:
+```
+$ docker run --rm hello-world
+$ docker ps -a
+```
+
+## Running containers - configuration
+
+* We can set environment variables in the container with `--env` or `-e`:
+
+```
+$ docker run -e MODEL_ARCH=resnet ubuntu
+```
+
+* If we want to expose network ports (e.g. for dashboards) we can map ports from the container to the host with `-p`:
+
+```
+$ docker run -p 8080:80 httpd
+```
+
+* NOTE: the order is host-container, so `-p 8080:80` will connect port `80` _on the container_ to port `8080` _on the host_
+
+## Where do we keep the model?
+"Containers are meant to be _disposable_: changes you want to keep should be outside of the container"
+
+So where do we store the trained models?
+
+## Where could we keep the model? {.smaller}
+
+* Embed it as part of the image
+    * Not an option for training, gives us large images
+* Copy it to/from the container after start
+    * `docker cp` can copy files
+    * Can bump into runtime storage limits
+* Upload to/download from online server
+    * Extra warmup time, network traffic
+    * Weights & Biases, Hugging Face libraries provide functionality for this
+
+## Where should we keep the model? {.smaller}
+* Bind mounts
+    * Creates a temporary link between a directory on the host PC and a directory in the container
+    * Pros: Can see the directory, pull files quickly
+    * Cons: Assumes the storage is on your PC, not as flexible as volumes
+* Volumes
+    * Docker creates and manages a persistent directory 
+    * Pros: More flexible, can set up plugins to mount cloud storage as volumes
+    * Cons: Requires a running (temporary) container to copy files to host
+
+## Mapping bind mounts
+
+To mount a directory with a bind mount we can use `--mount`:
+
+```
+$ docker run --mount type=bind,source=$(pwd)/assets/,target=/pictures/ ubuntu
+```
+
+`source` points to the folder on the host (`assets` in the working directory), and `target` is the folder it will appear as in the container (`/pictures/`)
+
+## Setting up a volume
+
+To set up a volume we run `docker volume create`:
+
+```
+$ docker volume create my-volume
+$ docker volume inspect my-volume
+```
+
+We can then mount it in the same way, but with `type=volume`:
+```
+$ docker run --mount type=volume,source=my-volume,target=/results/ ubuntu
+```
+
+## Break
+
+<!-- Building containers -->
+## Creating an image - FROM
+
+* Template file conventionally named `Dockerfile` (no extension)
+* Images start with a `FROM` statement, which specifies which image (`ubuntu`) and tag (`22.04`) to build on:
+```
+FROM ubuntu:22.04
+```
+* If you omit the tag, Docker will automatically use `latest` - but use one if you can!
+
+## Building an image
+
+* This turns out to be a complete Dockerfile:
+``` 
+FROM ubuntu:22.04
+```
+
+* Save this as `Dockerfile` (no extension!) in a project directory, and run
+```
+$ docker build . -t my-image
+```
+
+* `docker build` expects a _build context_ - the directory to pull project files from when building the image - like the current directory `.`
+* `-t` ties the new image to a name and a _tag_
+
+## Creating an image - RUN
+
+* Once we have a base, we specify which commands to run to build the environment
+* `RUN` statements are followed by commands to run - for instance, we can install packages:
+
+```
+RUN apt-get update && apt-get install -y python3
+```
+
+## Creating an image - COPY
+<!--
+* docker build takes a path to the _build context_ with the files COPY should retrieve
+* Usually we just make this the current directory . where the Dockerfile is,
+    so `docker build .` 
+ -->
+* Earlier, we specified the _build context_ (usually the project directory)
+* `COPY` copies files from the build context to the container:
+```
+COPY train.py /experiment/train.py
+```
+
+* We can set the _working directory_ in the container with `WORKDIR`
+```
+WORKDIR /experiment/
+```
+* The `.dockerignore` file specifies which files not to copy from the context
+
+## Creating an image - ENV
+
+* We can also specify which settings the container expects/respects when it runs - conventionally done through environment variables
+* `ENV` sets the default value for an environment variable:
+* Default values can be overridden with `docker run -e`
+
+
+## Creating an image - CMD
+
+* Finally, we specify what should happen when the container _starts_ with `CMD`:
+
+```
+CMD python train.py
+```
+
+## Full image example
+Using all of the commands:
+```
+FROM ubuntu:22.04
+ENV BATCH_SIZE=128
+RUN apt-get update && apt-get install -y python3
+COPY train.py /experiment/train.py
+CMD python3 /experiment/train.py
+```
+
+## Debugging tip 1
+
+* What if: your image fails to build on step 14?
+* You can turn off Buildkit to get intermediate images for each layer:
+On Linux:
+```
+$ DOCKER_BUILDKIT=0 docker build .
+```
+On Windows:
+```
+set DOCKER_BUILDKIT=0& docker build .
+```
+
+* You can create a container from the intermediate image and retry the step:
+```
+$ docker exec -it bash 
+# pip install ...
+```
+
+## Debugging tip 2
+
+* What if: the training suddenly stops and nothing happens?
+* Find the running container
+```
+$ docker ps -a
+e593fff04794   postgres   "docker-entrypoint.s…"   10 seconds ago   Up 9 seconds   5432/tcp   stupefied_elion
+```
+* and start an interactive shell inside it:
+```
+$ docker exec -it stupefied_elion bash
+```
+
+## Archiving images
+You can also save images as archives with `docker save`
+
+```
+$ docker save mnist-demo > mnist-demo.tar
+```
+
+and load them with `docker load`
+
+```
+$ docker load < mnist-demo.tar
+```
+
+## Making cache-friendly images
+
+* Images are composed of multiple *layers*: each set of changes made by RUN and COPY makes up a layer. Try:
+
+`$ docker image inspect python`
+
+* To avoid new images for every build, Docker saves extra info for each layer:
+    * For RUN, the command is saved
+    * For COPY, a checksum of the added files is saved
+* If the commands run/the files added by the layer are the same, and the last layer is the same, the layer is _reused_
+
+## Making cache-friendly images pt. 2
+
+* For this reason, the most frequent and smallest changes should come _last_ in your image, e.g.
+
+1. Installing system packages
+2. Installing Python packages
+3. Adding your script
+4. Running your script
+
+* The commands should, as far as possible, have the same results each time you run them
+
+## System package installation
+
+* When using `apt`, group together updating and package installation:
+```
+apt-get update && apt-get install -y python3
+```
+* **NOTE**: This _doesn't_ guarantee that you get the latest packages _every_ time you build, but makes sure the package index makes sense when you install the packages
+
+* Possible to lock `apt` packages to specific versions, but specifying the distro usually sufficient
+
+
+## Language package installation {.smaller}
+
+* Generally we want a _lock file_ with exact package versions, which we can then restore as part of building the image
+* In Python, `pip freeze` produces a list of all packages installed
+```
+$ pip freeze > requirements.txt
+```
+* Good practice to set up a virtual environment with `venv` to isolate exactly which packages the project needs
+* In R, `renv` (formerly `packrat`) can create similar virtual environments with lock files:
+```
+renv::snapshot() # saves project deps to renv.lock
+renv::restore() # restores deps from renv.lock
+```
+
+## M1 Mac: installing amd64 packages
+
+* Common problem on M1 Macs: older packages/libraries without ARM binaries
+* We can ask Docker to have the container act as an Intel Mac with `--platform=linux/amd64`:
+
+```
+docker run --platform=linux/amd64 ubuntu uname -a
+```
+
+## Packaging for cloud services
+
+* You can set up your own container registry with the cloud provider:
+    * Amazon ECR
+    * Azure Container Registry
+    * Google Cloud Container Registry
+
+
+## Packaging for Springfield (UiT) {.smaller}
+
+* UiT's Springfield cluster uses Kubernetes for _orchestration_ across multiple nodes
+* Docker Desktop allows setting up your PC as a single-node Kubernetes cluster
+* Kubernetes lets us define a **Job** which runs one or more containers until completion:
+
+```
+kind: Job
+apiVersion: batch/v1
+metadata:
+  name: your-training-job
+spec:
+  template:
+    spec:
+      containers:
+      - name: your-training
+        image: "your-training-image"
+        workingDir: /storage
+        command: ["sh", "train.sh"]
+        volumeMounts:
+        - name: storage
+          mountPath: /storage
+      volumes:
+      - name: storage
+        persistentVolumeClaim:
+          claimName: storage
+      restartPolicy: OnFailure
+  backoffLimit: 0
+```
+
+## Packaging for NRIS HPC (Betzy, LUMI) {.smaller}
+
+* We can push 
+* However: container libraries most likely _not_ tuned for the HPC cluster
+    * If libraries are available as Lmod modules, the modules will be faster
+* But containers are still useful for
+    * Portability
+    * Specifying package/library versions
+
+## Packaging for NRIS HPC - Singularity (Betzy, LUMI) {.smaller}
+
+* Singularity, the container runtime installed on NRIS HPC computers, supports converting Docker images to Singularity .sif images. Running
+```
+singularity pull --name train.sif docker://jlu015/train:latest
+```
+will retrieve the image `jlu015/train` from Docker Hub and save it as `train.sif`
+
+* To run the default command specified by `CMD`, we can call `singularity run`
+
+* Alternatively, `singularity exec` will run a specific command:
+
+## Packaging for NRIS HPC - Writing a SLURM job (Betzy, LUMI) {.smaller}
+
+* 
+
+<!-- Topics:
+Budget: 135 min (3 x 30 min, 3 x 15 min Qs+break)
+
+Intro, motivation (10 min)
+* Who am I?
+* What does replicability look like for ML researchers?
+* How can Docker help?
+
+Introduction to Docker (15 min)
+* Installing Docker
+* Running a Docker image
+
+
+
+Break (10 min)
+
+
+
+Topics:
+* Writing a Dockerfile
+    * Docker image structure
+    * Base image choice
+
+    * 
+* Tagging and pushing
+    * 
+* docker save and load
+* Making cache-friendly models
+    * Installing Apt dependencies
+    * Splitting requirements
+* How to access models
+    * Embedding vs. bind mounts vs. volumes
+* Packing jobs for Springfield 
+* Converting Docker images to Singularity images for Betzy/LUMI
+
+* Getting x86 libraries on M1
+* GPU access (CUDA)
+* Device access (Arduino)
+* Debugging tricks
+    * Opening a shell in a running container
+    * Starting a shell in a failed build
+ -->
+
+## Resources
+* Docker in Y Minutes: 
+    * https://learnxinyminutes.com/docs/docker/
+* The Play with Docker exercises: 
+    * https://training.play-with-docker.com/
+* NRIS' documentation on containers: 
+    * https://documentation.sigma2.no/
