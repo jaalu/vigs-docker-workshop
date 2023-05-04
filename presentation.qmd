@@ -2,7 +2,7 @@
 title: "Docker for researchers"
 author: "Jørgen Aarmo Lund"
 date: today
-format: revealjs
+format: pdf
 ---
 
 ## Introduction 
@@ -421,6 +421,30 @@ renv::restore() # restores deps from renv.lock
 docker run --platform=linux/amd64 ubuntu uname -a
 ```
 
+## Building images - conclusion
+
+* Order changes from least to most frequent
+* Commands should be deterministic 
+* Virtual environments and lock files useful to have reproducible containers
+
+## GPU/device access
+
+* Nvidia Container Runtime lets you run CUDA code in containers:
+
+```
+$ apt-get install nvidia-container-runtime
+```
+
+* Can use the `--gpus` switch to grant access to GPU:
+
+```
+$ docker run --gpus all ubuntu
+```
+
+* Windows: requires WSL 2, newer CUDA driver
+* Premade CUDA Docker images: https://github.com/NVIDIA/nvidia-docker/wiki/CUDA 
+* Also possible to grant access to USB/hardware devices with `--device`
+
 ## Packaging for cloud services
 
 * You can set up your own container registry with the cloud provider:
@@ -428,6 +452,12 @@ docker run --platform=linux/amd64 ubuntu uname -a
     * Azure Container Registry
     * Google Cloud Container Registry
 
+* To push the image to your cloud registry, tag your image with the URL of the registry and push:
+
+```
+$ docker tag mnist-demo jludemo.azurecr.io/mnist-demo
+$ docker push jludemo.azurecro.io/mnist.demo
+```
 
 ## Packaging for Springfield (UiT) {.smaller}
 
@@ -472,13 +502,21 @@ spec:
 
 * Singularity, the container runtime installed on NRIS HPC computers, supports converting Docker images to Singularity .sif images. Running
 ```
-singularity pull --name train.sif docker://jlu015/train:latest
+$ singularity pull --name train.sif docker://jlu015/train:latest
 ```
 will retrieve the image `jlu015/train` from Docker Hub and save it as `train.sif`
 
-* To run the default command specified by `CMD`, we can call `singularity run`
+* To run the default command specified by `CMD`, we can call `singularity run` with the image:
+
+```
+$ singularity run train.sif
+```
 
 * Alternatively, `singularity exec` will run a specific command:
+
+```
+$ singularity exec train.sif echo Hello world!
+```
 
 ## Packaging for NRIS HPC - Writing a SLURM job (Betzy, LUMI) {.smaller}
 
