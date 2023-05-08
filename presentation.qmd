@@ -34,20 +34,6 @@ Files available on
 
 https://github.com/jaalu/vigs-docker-workshop
 
-::: {.notes}
-So this workshop is on Docker for ML researchers. Most tutorials on containers are aimed at software developers who are developing web services, and 
-
-Even though many of you from UiT may be implicitly familiar with Docker since Springfield requires it, this workshop doesn't assume any familiarity with Docker. It is going to involve a little command line usage and Python, but I will try to explain what I am doing and you are free to pose questions during the talk and in the breaks afterwards.
-
-This workshop is going to be divided into three 30-minute blocks with 15 minute breaks afterwards for questions, testing and coffee breaks.
-
-The first block is going to be a brief introduction to containers, what sort of problems they try to solve and why they can be useful for researchers, and how we set up and run the containers.
-
-The second block is going to go into putting together our own images, and how we 
-
-The last block is going to talk about ML-specific topics like getting CUDA working, deploying containers to clusters 
-:::
-
 ## Motivation for software developers
 
 * IT around 2008[^1]: developers handing applications to sysadmins maintaining long-lived servers
@@ -58,22 +44,12 @@ The last block is going to talk about ML-specific topics like getting CUDA worki
 
 [^1]: https://www.atlassian.com/devops/what-is-devops/history-of-devops
 
-::: {.notes}
-Not too long ago the convention was (and still is, in places) that programming and server maintenance were two completely different disciplines: the programmers' job was to finish programs and the sysadmins' job was to ensure the servers were running. When it was time to upgrade, an admin set aside time to upgrade to take the server offline and install the upgrade. If the upgrade failed, the server would be out of commission until the upgrade was rolled back or a hotfix was hastily delivered. And if it turned out that they had two applications which depended on different versions of the same service, well, they had a problem.
-
-Around this time people figured out that Linux had good tools to try and isolate the resources programs had access to, and used them to put together isolated _container_ environments which both let them limit the fallout of a service failing, and let them maintain separate dependency sets for each service.
-:::
 
 ## Motivation for ML researchers
 
 * Replicability: making experimental conditions visible
 * Flexibility: easing transition from laptop tests to HPC training
 * Reusability: showing findings work in other settings too!
-
-::: {.notes}
-So how does this help us do research?
-
-:::
 
 ## Docker 
 
@@ -520,50 +496,7 @@ $ singularity exec train.sif echo Hello world!
 
 ## Packaging for NRIS HPC - Writing a SLURM job (Betzy, LUMI) {.smaller}
 
-* 
-
-<!-- Topics:
-Budget: 135 min (3 x 30 min, 3 x 15 min Qs+break)
-
-Intro, motivation (10 min)
-* Who am I?
-* What does replicability look like for ML researchers?
-* How can Docker help?
-
-Introduction to Docker (15 min)
-* Installing Docker
-* Running a Docker image
-
-
-
-Break (10 min)
-
-
-
-Topics:
-* Writing a Dockerfile
-    * Docker image structure
-    * Base image choice
-
-    * 
-* Tagging and pushing
-    * 
-* docker save and load
-* Making cache-friendly models
-    * Installing Apt dependencies
-    * Splitting requirements
-* How to access models
-    * Embedding vs. bind mounts vs. volumes
-* Packing jobs for Springfield 
-* Converting Docker images to Singularity images for Betzy/LUMI
-
-* Getting x86 libraries on M1
-* GPU access (CUDA)
-* Device access (Arduino)
-* Debugging tricks
-    * Opening a shell in a running container
-    * Starting a shell in a failed build
- -->
+See https://documentation.sigma2.no/code_development/guides/containers.html#singularity-in-job-scripts 
 
 ## Resources
 * Docker in Y Minutes: 
