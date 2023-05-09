@@ -2,7 +2,7 @@
 title: "Docker for researchers"
 author: "Jørgen Aarmo Lund"
 date: today
-format: pdf
+format: revealjs
 ---
 
 ## Introduction 
@@ -467,7 +467,7 @@ spec:
 
 ## Packaging for NRIS HPC (Betzy, LUMI) {.smaller}
 
-* We can push 
+* As long as architecture is the same, we can now push images and run the containers on HPC clusters!
 * However: container libraries most likely _not_ tuned for the HPC cluster
     * If libraries are available as Lmod modules, the modules will be faster
 * But containers are still useful for
