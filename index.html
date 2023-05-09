@@ -377,24 +377,6 @@ Jørgen Aarmo Lund
 <h2>Follow along</h2>
 <p>Files available on</p>
 <p>https://github.com/jaalu/vigs-docker-workshop</p>
-<aside class="notes">
-<p>So this workshop is on Docker for ML researchers. Most tutorials on containers are aimed at software developers who are developing web services, and</p>
-<p>Even though many of you from UiT may be implicitly familiar with Docker since Springfield requires it, this workshop doesn’t assume any familiarity with Docker. It is going to involve a little command line usage and Python, but I will try to explain what I am doing and you are free to pose questions during the talk and in the breaks afterwards.</p>
-<p>This workshop is going to be divided into three 30-minute blocks with 15 minute breaks afterwards for questions, testing and coffee breaks.</p>
-<p>The first block is going to be a brief introduction to containers, what sort of problems they try to solve and why they can be useful for researchers, and how we set up and run the containers.</p>
-<p>The second block is going to go into putting together our own images, and how we</p>
-<p>The last block is going to talk about ML-specific topics like getting CUDA working, deploying containers to clusters</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
 </section>
 <section id="motivation-for-software-developers" class="slide level2">
 <h2>Motivation for software developers</h2>
@@ -407,20 +389,6 @@ Jørgen Aarmo Lund
 </ul></li>
 <li>Containers allow <em>isolating</em> applications and running them with their own set of dependencies</li>
 </ul>
-<aside class="notes">
-<p>Not too long ago the convention was (and still is, in places) that programming and server maintenance were two completely different disciplines: the programmers’ job was to finish programs and the sysadmins’ job was to ensure the servers were running. When it was time to upgrade, an admin set aside time to upgrade to take the server offline and install the upgrade. If the upgrade failed, the server would be out of commission until the upgrade was rolled back or a hotfix was hastily delivered. And if it turned out that they had two applications which depended on different versions of the same service, well, they had a problem.</p>
-<p>Around this time people figured out that Linux had good tools to try and isolate the resources programs had access to, and used them to put together isolated <em>container</em> environments which both let them limit the fallout of a service failing, and let them maintain separate dependency sets for each service.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
 <aside><ol class="aside-footnotes"><li id="fn1"><p>https://www.atlassian.com/devops/what-is-devops/history-of-devops</p></li></ol></aside></section>
 <section id="motivation-for-ml-researchers" class="slide level2">
 <h2>Motivation for ML researchers</h2>
@@ -429,21 +397,8 @@ Jørgen Aarmo Lund
 <li>Flexibility: easing transition from laptop tests to HPC training</li>
 <li>Reusability: showing findings work in other settings too!</li>
 </ul>
-<aside class="notes">
-<p>So how does this help us do research?</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
 </section>
-<section id="docker" class="slide level2">
+<section id="docker" class="slide level2 smaller">
 <h2>Docker</h2>
 <div class="columns">
 <div class="column" style="width:70%;">
@@ -707,7 +662,7 @@ CMD python3 /experiment/train.py</code></pre>
 <h2>Debugging tip 1</h2>
 <ul>
 <li>What if: your image fails to build on step 14?</li>
-<li>You can turn off Buildkit to get intermediate images for each layer: On Linux:</li>
+<li>You can temporarily turn off Buildkit to get intermediate images for each layer: On Linux:</li>
 </ul>
 <pre><code>$ DOCKER_BUILDKIT=0 docker build .</code></pre>
 <p>On Windows:</p>
@@ -715,7 +670,7 @@ CMD python3 /experiment/train.py</code></pre>
 <ul>
 <li>You can create a container from the intermediate image and retry the step:</li>
 </ul>
-<pre><code>$ docker exec -it bash 
+<pre><code>$ docker exec -it &lt;intermediate-image-id&gt; bash 
 # pip install ...</code></pre>
 </section>
 <section id="debugging-tip-2" class="slide level2">
@@ -871,7 +826,7 @@ spec:
 <section id="packaging-for-nris-hpc-betzy-lumi" class="slide level2 smaller">
 <h2>Packaging for NRIS HPC (Betzy, LUMI)</h2>
 <ul>
-<li>We can push</li>
+<li>As long as architecture is the same, we can now push images and run the containers on HPC clusters!</li>
 <li>However: container libraries most likely <em>not</em> tuned for the HPC cluster
 <ul>
 <li>If libraries are available as Lmod modules, the modules will be faster</li>
@@ -901,51 +856,7 @@ spec:
 </section>
 <section id="packaging-for-nris-hpc---writing-a-slurm-job-betzy-lumi" class="slide level2 smaller">
 <h2>Packaging for NRIS HPC - Writing a SLURM job (Betzy, LUMI)</h2>
-<ul>
-<li></li>
-</ul>
-<!-- Topics:
-Budget: 135 min (3 x 30 min, 3 x 15 min Qs+break)
-
-Intro, motivation (10 min)
-* Who am I?
-* What does replicability look like for ML researchers?
-* How can Docker help?
-
-Introduction to Docker (15 min)
-* Installing Docker
-* Running a Docker image
-
-
-
-Break (10 min)
-
-
-
-Topics:
-* Writing a Dockerfile
-    * Docker image structure
-    * Base image choice
-
-    * 
-* Tagging and pushing
-    * 
-* docker save and load
-* Making cache-friendly models
-    * Installing Apt dependencies
-    * Splitting requirements
-* How to access models
-    * Embedding vs. bind mounts vs. volumes
-* Packing jobs for Springfield 
-* Converting Docker images to Singularity images for Betzy/LUMI
-
-* Getting x86 libraries on M1
-* GPU access (CUDA)
-* Device access (Arduino)
-* Debugging tricks
-    * Opening a shell in a running container
-    * Starting a shell in a failed build
- -->
+<p>See https://documentation.sigma2.no/code_development/guides/containers.html#singularity-in-job-scripts</p>
 </section>
 <section id="resources" class="slide level2">
 <h2>Resources</h2>
