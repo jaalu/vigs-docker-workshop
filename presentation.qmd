@@ -299,7 +299,7 @@ CMD python3 /experiment/train.py
 ## Debugging tip 1
 
 * What if: your image fails to build on step 14?
-* You can turn off Buildkit to get intermediate images for each layer:
+* You can temporarily turn off Buildkit to get intermediate images for each layer:
 On Linux:
 ```
 $ DOCKER_BUILDKIT=0 docker build .
@@ -311,7 +311,7 @@ set DOCKER_BUILDKIT=0& docker build .
 
 * You can create a container from the intermediate image and retry the step:
 ```
-$ docker exec -it bash 
+$ docker exec -it <intermediate-image-id> bash 
 # pip install ...
 ```
 
